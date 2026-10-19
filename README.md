@@ -126,8 +126,8 @@ uncompressed master it was derived from, which validates `zlib`, `lz4`,
 encoder rather than against this package's own output.
 
 ```
-go test ./...
+make test-verbose
 ```
 
 The `img/` directory is intentionally not committed: those are the author's
-raw subframes. img/test_files.txt is the xisf files list needed for testing.
+raw subframes. `img/test_files.txt` is the xisf files list needed for testing.

@@ -5,4 +5,3 @@ LN_Reference_Light_BIN-1_9576x6388_EXPOSURE-300.00s_FILTER-S_mono_zlib_checksum.
 LN_Reference_Light_BIN-1_9576x6388_EXPOSURE-300.00s_FILTER-S_mono_zlib.xisf
 LN_Reference_Light_BIN-1_9576x6388_EXPOSURE-300.00s_FILTER-S_mono_zstd.xisf
 LN_Reference_Light_BIN-1_9576x6388_EXPOSURE-300.00s_FILTER-S_mono.xisf
-test_files.txt
