@@ -1,0 +1,9 @@
+# Real PixInsight sample files used by the tests. Not committed: they are
+# large raw subframes.
+/img/LN_Reference_Light_BIN-1_9576x6388_EXPOSURE-300.00s_FILTER-S_mono*
+/img/IC5070_SHO.xisf
+/docs/
+.DS_Store
+
+# Build and coverage artifacts.
+/test/
