@@ -1,0 +1,8 @@
+IC5070_SHO.xisf
+LN_Reference_Light_BIN-1_9576x6388_EXPOSURE-300.00s_FILTER-S_mono_lz4.xisf
+LN_Reference_Light_BIN-1_9576x6388_EXPOSURE-300.00s_FILTER-S_mono_lz4hc.xisf
+LN_Reference_Light_BIN-1_9576x6388_EXPOSURE-300.00s_FILTER-S_mono_zlib_checksum.xisf
+LN_Reference_Light_BIN-1_9576x6388_EXPOSURE-300.00s_FILTER-S_mono_zlib.xisf
+LN_Reference_Light_BIN-1_9576x6388_EXPOSURE-300.00s_FILTER-S_mono_zstd.xisf
+LN_Reference_Light_BIN-1_9576x6388_EXPOSURE-300.00s_FILTER-S_mono.xisf
+test_files.txt
