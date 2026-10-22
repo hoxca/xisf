@@ -1,5 +1,8 @@
 # xisf
 
+[![Go Reference](https://pkg.go.dev/badge/github.com/hoxca/xisf.svg)](https://pkg.go.dev/github.com/hoxca/xisf)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 A Go library for reading and writing monolithic [XISF](https://pixinsight.com/doc/docs/XISF-1.0-spec/XISF-1.0-spec.html)
 (PixInsight Extensible Image Serialization Format) images.
 
@@ -9,6 +12,11 @@ and elements that actually change are re-rendered. Image blocks whose pixels
 were not touched are copied back with their original bytes, and edited blocks
 keep their original codec, shuffle item size, subblock layout, byte order and
 checksum algorithm.
+
+## Status
+
+v0.0.1 — pre-1.0. The API may change between minor versions until v1.0.0.
+Only monolithic XISF units are supported; see the limitations below.
 
 ## Install
 
@@ -131,3 +139,7 @@ make test-verbose
 
 The `img/` directory is intentionally not committed: those are the author's
 raw subframes. `img/test_files.txt` is the xisf files list needed for testing.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
