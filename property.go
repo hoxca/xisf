@@ -105,6 +105,141 @@ func (f *File) Property(id string) (*Property, bool) {
 	return nil, false
 }
 
+// AddProperty appends p to the unit's <Metadata> element. It returns
+// ErrProperty if a property with the same identifier already exists in
+// Metadata. Properties whose value is stored in a data block are rejected
+// with ErrUnsupported.
+func (f *File) AddProperty(p Property) error {
+	if err := validateProperty(p); err != nil {
+		return err
+	}
+	meta := f.metadataElement(true)
+	if findProperty(meta, p.ID) != nil {
+		return errf(ErrProperty, "property %q already exists", p.ID)
+	}
+	meta.appendChild(newPropertyNode(p))
+	f.metaDirty = true
+	return nil
+}
+
+// SetProperty adds p to the unit's <Metadata> element, or updates the existing
+// Metadata property with the same identifier. Updating a property that stores
+// its value in a data block is not supported.
+func (f *File) SetProperty(p Property) error {
+	if err := validateProperty(p); err != nil {
+		return err
+	}
+	meta := f.metadataElement(true)
+	if n := findProperty(meta, p.ID); n != nil {
+		if _, ok := n.attrValue("location"); ok {
+			return errf(ErrUnsupported, "property %q stores its value in a data block", p.ID)
+		}
+		updatePropertyNode(n, p)
+	} else {
+		meta.appendChild(newPropertyNode(p))
+	}
+	f.metaDirty = true
+	return nil
+}
+
+func validateProperty(p Property) error {
+	if p.ID == "" {
+		return errf(ErrProperty, "property id is empty")
+	}
+	if p.Type == "" {
+		return errf(ErrProperty, "property %q has no type", p.ID)
+	}
+	if p.Location != nil {
+		return errf(ErrUnsupported, "property %q uses a data block location", p.ID)
+	}
+	return nil
+}
+
+// metadataElement returns the unit's <Metadata> element, creating it as the
+// last child of the root when create is true and it does not exist.
+func (f *File) metadataElement(create bool) *xmlNode {
+	for _, n := range f.doc.root.children() {
+		if n.localName() == "Metadata" {
+			return n
+		}
+	}
+	if !create {
+		return nil
+	}
+	n := &xmlNode{name: "Metadata", dirty: true}
+	f.doc.root.appendChild(n)
+	return n
+}
+
+func findProperty(meta *xmlNode, id string) *xmlNode {
+	if meta == nil {
+		return nil
+	}
+	for _, n := range meta.children() {
+		if n.localName() != "Property" {
+			continue
+		}
+		if pid, _ := n.attrValue("id"); pid == id {
+			return n
+		}
+	}
+	return nil
+}
+
+func newPropertyNode(p Property) *xmlNode {
+	n := &xmlNode{name: "Property", dirty: true}
+	n.setAttr("id", p.ID)
+	n.setAttr("type", p.Type)
+	setOptionalPropertyAttr(n, "format", p.Format)
+	setOptionalPropertyAttr(n, "comment", p.Comment)
+	setOptionalPropertyInt(n, "length", p.Length, p.HasLength)
+	setOptionalPropertyInt(n, "rows", p.Rows, p.HasRows)
+	setOptionalPropertyInt(n, "columns", p.Columns, p.HasColumns)
+	if p.Type == "String" {
+		n.setText(p.Value)
+	} else {
+		n.setAttr("value", p.Value)
+	}
+	return n
+}
+
+func updatePropertyNode(n *xmlNode, p Property) {
+	n.setAttr("id", p.ID)
+	n.setAttr("type", p.Type)
+	setOptionalPropertyAttr(n, "format", p.Format)
+	setOptionalPropertyAttr(n, "comment", p.Comment)
+	setOptionalPropertyInt(n, "length", p.Length, p.HasLength)
+	setOptionalPropertyInt(n, "rows", p.Rows, p.HasRows)
+	setOptionalPropertyInt(n, "columns", p.Columns, p.HasColumns)
+	if p.Type == "String" {
+		n.removeAttr("value")
+		n.setText(p.Value)
+		return
+	}
+	n.setAttr("value", p.Value)
+	// Scalar, complex and time point properties are empty elements. Drop any
+	// character data left over from a previous inline-string value.
+	n.text = nil
+	n.content = nil
+	n.dirty = true
+}
+
+func setOptionalPropertyAttr(n *xmlNode, name, value string) {
+	if value == "" {
+		n.removeAttr(name)
+		return
+	}
+	n.setAttr(name, value)
+}
+
+func setOptionalPropertyInt(n *xmlNode, name string, value int64, present bool) {
+	if !present {
+		n.removeAttr(name)
+		return
+	}
+	n.setAttr(name, strconv.FormatInt(value, 10))
+}
+
 func (f *File) alignmentFromMetadata() int {
 	if p, ok := f.Property("XISF:BlockAlignmentSize"); ok && p.Value != "" {
 		if v, err := strconv.Atoi(p.Value); err == nil && v > 0 {

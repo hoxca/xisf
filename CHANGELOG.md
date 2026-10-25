@@ -6,6 +6,11 @@ to Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+
+- `File.AddProperty` and `File.SetProperty` for adding or updating unit
+  metadata properties before writing.
+
 ## [0.0.1] - 2026-10-22
 
 First public release.

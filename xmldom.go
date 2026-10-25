@@ -106,6 +106,14 @@ func (n *xmlNode) removeAttr(name string) {
 	}
 }
 
+// appendChild attaches child as the last child element. The child is marked
+// dirty so it is rendered from its fields instead of a source span.
+func (n *xmlNode) appendChild(child *xmlNode) {
+	child.parent = n
+	child.dirty = true
+	n.content = append(n.content, xmlContent{child: child})
+}
+
 // children returns the direct child elements in document order.
 func (n *xmlNode) children() []*xmlNode {
 	var out []*xmlNode

@@ -17,6 +17,7 @@ var (
 	ErrNot2D       = errors.New("image is not two-dimensional")
 	ErrFormat      = errors.New("sample format mismatch")
 	ErrBounds      = errors.New("pixel coordinate out of range")
+	ErrProperty    = errors.New("invalid property")
 )
 
 func errf(kind error, format string, args ...any) error {

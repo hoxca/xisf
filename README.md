@@ -90,10 +90,23 @@ are `zlib`, `lz4`, `lz4hc` and `zstd`, each optionally byte-shuffled.
 
 ## Metadata
 
-`f.Metadata()` and `f.Properties()` expose `Property` values read-only;
-the underlying XML is preserved on write. `f.Property("XISF:...")` looks one
-up. `WriteOptions.UpdateCreationTime` and `.CreatorApplication` update those
-two metadata properties.
+`f.Metadata()` and `f.Properties()` expose `Property` values; untouched
+properties keep their underlying XML on write. `f.Property("XISF:...")` looks
+one up. `f.AddProperty` appends a unit property, and `f.SetProperty` updates an
+existing one or appends it:
+
+```go
+err := f.SetProperty(xisf.Property{
+    ID:    "PCL:OverridableIdentifier",
+    Type:  "Boolean",
+    Value: "false",
+})
+```
+
+Scalar, complex and time point values are written as `value` attributes;
+`String` values are written as element text. Properties stored in data blocks
+are not supported. `WriteOptions.UpdateCreationTime` and `.CreatorApplication`
+update those two metadata properties.
 
 ## Supported
 
