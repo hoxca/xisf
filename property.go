@@ -67,13 +67,22 @@ func parseProperty(n *xmlNode, src []byte) *Property {
 func (f *File) Metadata() []*Property {
 	var out []*Property
 	for _, n := range f.doc.root.children() {
-		if n.localName() != "Metadata" {
-			continue
+		if n.localName() == "Metadata" {
+			out = append(out, propertiesUnder(n, f.doc.src)...)
 		}
-		for _, c := range n.children() {
-			if c.localName() == "Property" {
-				out = append(out, parseProperty(c, f.doc.src))
-			}
+	}
+	return out
+}
+
+// propertiesUnder returns the Property elements that are direct children of n.
+func propertiesUnder(n *xmlNode, src []byte) []*Property {
+	if n == nil {
+		return nil
+	}
+	var out []*Property
+	for _, c := range n.children() {
+		if c.localName() == "Property" {
+			out = append(out, parseProperty(c, src))
 		}
 	}
 	return out
@@ -98,6 +107,22 @@ func (f *File) Properties() []*Property {
 // Property returns the first property with the given identifier.
 func (f *File) Property(id string) (*Property, bool) {
 	for _, p := range f.Properties() {
+		if p.ID == id {
+			return p, true
+		}
+	}
+	return nil, false
+}
+
+// Properties returns the properties directly under the image's <Image>
+// element, in document order.
+func (im *Image) Properties() []*Property {
+	return propertiesUnder(im.elem, im.src)
+}
+
+// Property returns the first image-level property with the given identifier.
+func (im *Image) Property(id string) (*Property, bool) {
+	for _, p := range im.Properties() {
 		if p.ID == id {
 			return p, true
 		}
@@ -139,6 +164,41 @@ func (f *File) SetProperty(p Property) error {
 		meta.appendChild(newPropertyNode(p))
 	}
 	f.metaDirty = true
+	return nil
+}
+
+// AddProperty appends p to the image's <Image> element. It returns
+// ErrProperty if the image already has a property with the same identifier.
+// Properties whose value is stored in a data block are rejected with
+// ErrUnsupported.
+func (im *Image) AddProperty(p Property) error {
+	if err := validateProperty(p); err != nil {
+		return err
+	}
+	if findProperty(im.elem, p.ID) != nil {
+		return errf(ErrProperty, "image already has property %q", p.ID)
+	}
+	im.elem.appendChild(newPropertyNode(p))
+	im.headerDirty = true
+	return nil
+}
+
+// SetProperty adds p to the image's <Image> element, or updates the existing
+// image property with the same identifier. Updating a property that stores its
+// value in a data block is not supported.
+func (im *Image) SetProperty(p Property) error {
+	if err := validateProperty(p); err != nil {
+		return err
+	}
+	if n := findProperty(im.elem, p.ID); n != nil {
+		if _, ok := n.attrValue("location"); ok {
+			return errf(ErrUnsupported, "property %q stores its value in a data block", p.ID)
+		}
+		updatePropertyNode(n, p)
+	} else {
+		im.elem.appendChild(newPropertyNode(p))
+	}
+	im.headerDirty = true
 	return nil
 }
 

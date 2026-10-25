@@ -233,14 +233,16 @@ type Image struct {
 	// ICCProfile holds the decoded ICC profile bytes, if present.
 	ICCProfile []byte
 
-	dims      []int
-	channels  int
-	data      any
-	dirty     bool
-	byteOrder ByteOrder
-	block     *dataBlock
-	elem      *xmlNode
-	importErr error
+	dims        []int
+	channels    int
+	data        any
+	dirty       bool
+	headerDirty bool
+	byteOrder   ByteOrder
+	block       *dataBlock
+	elem        *xmlNode
+	src         []byte
+	importErr   error
 }
 
 // Dims returns the image's dimensions, fastest-varying first, without the

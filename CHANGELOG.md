@@ -10,6 +10,8 @@ to Semantic Versioning.
 
 - `File.AddProperty` and `File.SetProperty` for adding or updating unit
   metadata properties before writing.
+- `Image.Properties`, `Image.Property`, `Image.AddProperty`, and
+  `Image.SetProperty` for image-level metadata.
 
 ## [0.0.1] - 2026-10-22
 

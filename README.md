@@ -108,6 +108,20 @@ Scalar, complex and time point values are written as `value` attributes;
 are not supported. `WriteOptions.UpdateCreationTime` and `.CreatorApplication`
 update those two metadata properties.
 
+Image-level properties use the same API on `Image`:
+
+```go
+im := f.Images()[0]
+err := im.AddProperty(xisf.Property{
+    ID:    "PCL:OverridableIdentifier",
+    Type:  "Boolean",
+    Value: "false",
+})
+```
+
+`im.Properties()` and `im.Property(id)` return only the properties directly
+under that image.
+
 ## Supported
 
 * Monolithic `.xisf` units: 8-byte signature, 32-bit header length, XML header,

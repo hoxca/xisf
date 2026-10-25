@@ -289,6 +289,7 @@ func (f *File) parseImage(n *xmlNode) (*Image, error) {
 		ColorSpace:   Gray,
 		PixelStorage: Planar,
 		elem:         n,
+		src:          f.doc.src,
 	}
 	im.ID, _ = n.attrValue("id")
 	im.UUID, _ = n.attrValue("uuid")
@@ -592,7 +593,7 @@ func (f *File) isClean() bool {
 		return false
 	}
 	for _, im := range f.allImages {
-		if im.dirty {
+		if im.dirty || im.headerDirty {
 			return false
 		}
 	}
