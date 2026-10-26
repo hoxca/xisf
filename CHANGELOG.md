@@ -12,6 +12,9 @@ to Semantic Versioning.
   metadata properties before writing.
 - `Image.Properties`, `Image.Property`, `Image.AddProperty`, and
   `Image.SetProperty` for image-level metadata.
+- `NewImage` and `ImageSpec` for creating monolithic images from scratch with
+  adjustable geometry, mono or RGB/CIELab channels, and planar or normal
+  storage.
 
 ## [0.0.1] - 2026-10-22
 

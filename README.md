@@ -51,6 +51,53 @@ if err := f.WriteFile("light.xisf", nil); err != nil {
 `At`/`Set` are available for scalar access and `Float64`/`SetFloat64` for a
 float64 copy. `SetPixels` installs a slice you own.
 
+## Creating files
+
+`NewImage` builds a new monolithic unit around an existing pixel slice. The
+slice is used directly and must be in planar order: all samples of channel 0,
+then channel 1, and so on.
+
+```go
+rgb := make([]float32, 3*w*h)
+// fill rgb
+
+f, err := xisf.NewImage(xisf.ImageSpec{
+    Width:        w,
+    Height:       h,
+    Channels:     3,
+    PixelStorage: xisf.Normal, // interleaved in the file
+    ID:           "SHO",
+    ImageType:    "MasterLight",
+}, rgb)
+if err != nil {
+    log.Fatal(err)
+}
+
+im := f.Images()[0]
+err = im.AddProperty(xisf.Property{
+    ID:    "PCL:OverridableIdentifier",
+    Type:  "Boolean",
+    Value: "false",
+})
+if err != nil {
+    log.Fatal(err)
+}
+
+err = f.WriteFile("out.xisf", &xisf.WriteOptions{
+    Compression: &xisf.Compression{Codec: xisf.CodecZlib},
+})
+if err != nil {
+    log.Fatal(err)
+}
+```
+
+The sample format is inferred from the slice type. One channel implies
+`Gray`; three channels imply `RGB`, or `CIELab` when `ColorSpace` is set.
+Floating-point and complex images default to `bounds="0:1"`, as XISF requires.
+Integer images omit bounds unless `HasBounds` is set. `NewImage` writes
+`XISF:CreationTime` and `XISF:CreatorApplication` metadata; the latter can be
+overridden through `WriteOptions`.
+
 ## What is preserved
 
 * **Untouched files are byte-identical.** `Bytes(nil)` on a freshly opened
@@ -139,7 +186,6 @@ under that image.
 * Distributed units: `.xish` headers, `.xisb` block files, and `path(...)` /
   `url(...)` locations are rejected with `ErrUnsupported`.
 * N-dimensional images: they are preserved but not editable.
-* Creating files from scratch: there is no constructor for a new `File`.
 * Editing ancillary blocks: thumbnails are editable through
   `Image.Thumbnail`; ICC profiles and FITS keywords are exposed read-only and
   preserved verbatim.

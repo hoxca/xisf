@@ -18,6 +18,7 @@ var (
 	ErrFormat      = errors.New("sample format mismatch")
 	ErrBounds      = errors.New("pixel coordinate out of range")
 	ErrProperty    = errors.New("invalid property")
+	ErrGeometry    = errors.New("invalid image geometry")
 )
 
 func errf(kind error, format string, args ...any) error {
