@@ -79,6 +79,15 @@ type WriteOptions struct {
 	// Compression overrides the codec used for dirty image blocks. Nil keeps
 	// each block's original compression.
 	Compression *Compression
+	// Uncompressed stores image blocks without compression. Compressed blocks
+	// are decoded and rewritten even when their pixels were not modified, so
+	// this converts a compressed file to an uncompressed one. It takes
+	// precedence over Compression. PixInsight needs uncompressed XISF for
+	// incremental file reads, which processes such as ImageIntegration rely
+	// on. If the file declares no XISF:BlockAlignmentSize, a 4096-byte
+	// alignment is declared and applied. XISF:OutputHints is left untouched;
+	// it is advisory metadata that decoders must not rely on.
+	Uncompressed bool
 	// CompressionLevel is the abstract 1..100 level passed to the codec. Zero
 	// uses the original XISF:CompressionLevel property when present.
 	CompressionLevel int
@@ -500,7 +509,7 @@ func (f *File) WriteFile(path string, opts *WriteOptions) error {
 // Bytes renders the complete monolithic file.
 func (f *File) Bytes(opts *WriteOptions) ([]byte, error) {
 	changesMetadata := opts != nil && (opts.UpdateCreationTime || opts.CreatorApplication != "")
-	if !changesMetadata && f.isClean() {
+	if !changesMetadata && f.isClean(opts) {
 		return append([]byte(nil), f.src...), nil
 	}
 	if opts != nil {
@@ -588,9 +597,22 @@ func (f *File) Bytes(opts *WriteOptions) ([]byte, error) {
 	return out, nil
 }
 
-func (f *File) isClean() bool {
+func (f *File) isClean(opts *WriteOptions) bool {
 	if f.metaDirty {
 		return false
+	}
+	// A dirty block means a previous write already diverged from f.src.
+	for _, b := range f.blocks {
+		if b.dirty {
+			return false
+		}
+	}
+	if opts != nil && opts.Uncompressed {
+		for _, im := range f.allImages {
+			if b := im.block; b != nil && b.compression != nil {
+				return false
+			}
+		}
 	}
 	for _, im := range f.allImages {
 		if im.dirty || im.headerDirty {
@@ -601,6 +623,19 @@ func (f *File) isClean() bool {
 }
 
 func (f *File) prepare(opts *WriteOptions) error {
+	uncompressed := opts != nil && opts.Uncompressed
+	// Uncompressed output is meant to be readable incrementally, so give it
+	// the alignment PixInsight writes itself when the source declares none.
+	if uncompressed && f.alignment <= 1 {
+		f.alignment = defaultAlignment
+		if err := f.SetProperty(Property{
+			ID:    "XISF:BlockAlignmentSize",
+			Type:  "UInt16",
+			Value: strconv.Itoa(defaultAlignment),
+		}); err != nil {
+			return err
+		}
+	}
 	level := 0
 	if opts != nil && opts.CompressionLevel > 0 {
 		level = opts.CompressionLevel
@@ -617,15 +652,20 @@ func (f *File) prepare(opts *WriteOptions) error {
 		}
 	}
 	for _, im := range f.allImages {
-		if !im.dirty {
+		b := im.block
+		if b == nil {
+			return errf(ErrCorrupt, "image has no data block")
+		}
+		// Clean blocks are copied verbatim, unless uncompressed output was
+		// requested and the block needs to be decoded first.
+		if !im.dirty && (!uncompressed || b.compression == nil) {
 			continue
 		}
 		if err := im.require2D(); err != nil {
 			return err
 		}
-		b := im.block
-		if b == nil {
-			return errf(ErrCorrupt, "image has no data block")
+		if b.unavailable != "" {
+			return errf(ErrUnsupported, "cannot re-encode image block: %s", b.unavailable)
 		}
 		b.dirty = true
 		plain, err := im.bytesNative()
@@ -636,6 +676,9 @@ func (f *File) prepare(opts *WriteOptions) error {
 		comp := b.compression
 		if opts != nil && opts.Compression != nil {
 			comp = opts.Compression
+		}
+		if uncompressed {
+			comp = nil
 		}
 		b.newStored = plain
 		b.newCompression = nil
@@ -679,6 +722,13 @@ func (f *File) prepare(opts *WriteOptions) error {
 					b.newSubblocks = subs
 				}
 			}
+		}
+		if uncompressed && b.compression != nil {
+			// The block is stored raw now. Drop the parsed codec so a later
+			// write on this File does not silently recompress it. b.stored
+			// still holds the old compressed bytes, which is harmless because
+			// b.dirty keeps them out of the write path.
+			b.compression = nil
 		}
 
 		alg := ChecksumAlgorithm("")

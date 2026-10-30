@@ -475,3 +475,83 @@ func TestRealFileRecompress(t *testing.T) {
 		t.Logf("compressed size %d is not smaller than original %d", len(out), len(f.src))
 	}
 }
+
+// TestRealFileDecompress converts a PixInsight-compressed sample to an
+// uncompressed file without editing pixels, and checks that the samples match
+// the uncompressed master. This is the PixInsight incremental-read scenario.
+func TestRealFileDecompress(t *testing.T) {
+	if testing.Short() {
+		t.Skip("large sample files skipped in -short mode")
+	}
+	paths, _ := filepath.Glob("img/*.xisf")
+	if len(paths) == 0 {
+		t.Skip("no files in img/")
+	}
+	infos := make(map[string]sampleInfo, len(paths))
+	for _, p := range paths {
+		infos[p] = readSampleInfo(t, p)
+	}
+	target, ref := "", ""
+	for _, p := range paths {
+		if !infos[p].hasComp {
+			continue
+		}
+		if r := referenceFor(paths, p, infos); r != "" {
+			target, ref = p, r
+			break
+		}
+	}
+	if target == "" {
+		t.Skip("no compressed sample with an uncompressed reference in img/")
+	}
+
+	f, err := Open(target)
+	if err != nil {
+		t.Fatalf("open: %v", err)
+	}
+	im := f.Images()[0]
+	out, err := f.Bytes(&WriteOptions{Uncompressed: true})
+	if err != nil {
+		t.Fatalf("write: %v", err)
+	}
+
+	f2, err := Parse(out)
+	if err != nil {
+		t.Fatalf("reparse: %v", err)
+	}
+	im2 := f2.Images()[0]
+	if im2.block.compression != nil {
+		t.Fatalf("compression survived: %s", im2.block.compression)
+	}
+	if _, ok := im2.block.elem.attrValue("subblocks"); ok {
+		t.Fatal("subblocks attribute survived")
+	}
+	want := int64(im.SampleCount() * im.SampleFormat.Size())
+	if im2.block.loc.Size != want {
+		t.Fatalf("stored size = %d, want %d", im2.block.loc.Size, want)
+	}
+	if im2.block.loc.Position%defaultAlignment != 0 {
+		t.Fatalf("block position %d is not aligned", im2.block.loc.Position)
+	}
+
+	refFile, err := Open(ref)
+	if err != nil {
+		t.Fatalf("open reference: %v", err)
+	}
+	refPix, err := Pixels[float32](refFile.Images()[0])
+	if err != nil {
+		t.Fatalf("reference pixels: %v", err)
+	}
+	got, err := Pixels[float32](im2)
+	if err != nil {
+		t.Fatalf("pixels: %v", err)
+	}
+	if len(got) != len(refPix) {
+		t.Fatalf("got %d samples, reference has %d", len(got), len(refPix))
+	}
+	for i := range got {
+		if math.Float32bits(got[i]) != math.Float32bits(refPix[i]) {
+			t.Fatalf("sample %d = %v, reference %v", i, got[i], refPix[i])
+		}
+	}
+}

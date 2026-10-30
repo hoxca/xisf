@@ -95,8 +95,10 @@ The sample format is inferred from the slice type. One channel implies
 `Gray`; three channels imply `RGB`, or `CIELab` when `ColorSpace` is set.
 Floating-point and complex images default to `bounds="0:1"`, as XISF requires.
 Integer images omit bounds unless `HasBounds` is set. `NewImage` writes
-`XISF:CreationTime` and `XISF:CreatorApplication` metadata; the latter can be
-overridden through `WriteOptions`.
+`XISF:CreationTime`, `XISF:CreatorApplication` and `XISF:BlockAlignmentSize`
+metadata; the creator application can be overridden through `WriteOptions`.
+Blocks are aligned to 4096 bytes, which the declared property makes visible to
+readers.
 
 ## What is preserved
 
@@ -134,6 +136,24 @@ if err != nil {
 
 `Compression.UncompressedSize` is filled in from the image geometry. Codecs
 are `zlib`, `lz4`, `lz4hc` and `zstd`, each optionally byte-shuffled.
+
+### Writing uncompressed blocks
+
+`WriteOptions.Uncompressed` stores image blocks raw. It also converts blocks
+that were already compressed, even when no pixel was edited, so it works on a
+file you have only just opened:
+
+```go
+err := f.WriteFile("out.xisf", &xisf.WriteOptions{Uncompressed: true})
+```
+
+This matters for PixInsight, which only performs incremental file reads on
+uncompressed XISF: processes such as ImageIntegration reject compressed input
+with *"Incremental file reads have been enabled, but they cannot be performed
+on this file"*. The option takes precedence over `Compression`. A file that
+declares no `XISF:BlockAlignmentSize` gets the 4096-byte alignment PixInsight
+uses for its own uncompressed output. `XISF:OutputHints` is left alone, since
+that property is advisory and a decoder must not rely on it.
 
 ## Metadata
 

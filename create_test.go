@@ -42,6 +42,9 @@ func TestNewImageMonoFloat32(t *testing.T) {
 	if p, ok := f.Property("XISF:CreatorApplication"); !ok || p.Value != "xisf" {
 		t.Fatalf("creator application = %+v, %v", p, ok)
 	}
+	if p, ok := f.Property("XISF:BlockAlignmentSize"); !ok || p.Type != "UInt16" || p.Value != "4096" {
+		t.Fatalf("block alignment = %+v, %v", p, ok)
+	}
 
 	out, err := f.Bytes(nil)
 	if err != nil {
@@ -50,6 +53,9 @@ func TestNewImageMonoFloat32(t *testing.T) {
 	f2, err := Parse(out)
 	if err != nil {
 		t.Fatalf("Parse: %v", err)
+	}
+	if p, ok := f2.Property("XISF:BlockAlignmentSize"); !ok || p.Value != "4096" {
+		t.Fatalf("written block alignment = %+v, %v", p, ok)
 	}
 	im2 := f2.Images()[0]
 	got, err := Pixels[float32](im2)

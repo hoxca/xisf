@@ -2,6 +2,7 @@ package xisf
 
 import (
 	"fmt"
+	"strconv"
 	"time"
 )
 
@@ -41,7 +42,8 @@ type ImageSpec struct {
 //
 // The returned File is fully writable. Add image properties through the
 // image's AddProperty or SetProperty methods, and compression or checksums
-// through WriteOptions when calling Bytes or WriteFile.
+// through WriteOptions when calling Bytes or WriteFile. The image block is
+// aligned to XISF:BlockAlignmentSize, which NewImage declares as 4096.
 func NewImage[T Sample](spec ImageSpec, pixels []T) (*File, error) {
 	if spec.Width <= 0 || spec.Height <= 0 {
 		return nil, errf(ErrGeometry, "image is %d×%d, want positive dimensions", spec.Width, spec.Height)
@@ -172,6 +174,15 @@ func NewImage[T Sample](spec ImageSpec, pixels []T) (*File, error) {
 		ID:    "XISF:CreatorApplication",
 		Type:  "String",
 		Value: "xisf",
+	}); err != nil {
+		return nil, err
+	}
+	// Declare the alignment that Bytes applies to attached blocks, so readers
+	// can memory-map or seek into them (PixInsight's incremental reads).
+	if err := f.SetProperty(Property{
+		ID:    "XISF:BlockAlignmentSize",
+		Type:  "UInt16",
+		Value: strconv.Itoa(defaultAlignment),
 	}); err != nil {
 		return nil, err
 	}

@@ -14,7 +14,10 @@ to Semantic Versioning.
   `Image.SetProperty` for image-level metadata.
 - `NewImage` and `ImageSpec` for creating monolithic images from scratch with
   adjustable geometry, mono or RGB/CIELab channels, and planar or normal
-  storage.
+  storage. New images declare `XISF:BlockAlignmentSize` (4096).
+- `WriteOptions.Uncompressed` stores image blocks raw and converts already
+  compressed blocks without touching their pixels, which is what PixInsight
+  needs for incremental file reads.
 
 ## [0.0.1] - 2026-10-22
 
